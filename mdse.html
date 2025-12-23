@@ -1,0 +1,349 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 0, "id": "Gatifloxacin", "label": "Gatifloxacin", "shape": "dot", "size": 31}, {"font": {"color": "white"}, "group": 0, "id": "Abnormal vision", "label": "Abnormal vision", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Acute allergic reaction", "label": "Acute allergic reaction", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Blepharitis allergic", "label": "Blepharitis allergic", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Chronic conjunctivitis", "label": "Chronic conjunctivitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Conjunctival disorder", "label": "Conjunctival disorder", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Conjunctival haemorrhage", "label": "Conjunctival haemorrhage", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Conjunctival irritation", "label": "Conjunctival irritation", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Conjunctivitis papillary", "label": "Conjunctivitis papillary", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Corneal defect", "label": "Corneal defect", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Corneal deposits", "label": "Corneal deposits", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Corneal thinning", "label": "Corneal thinning", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Cramps of lower extremities", "label": "Cramps of lower extremities", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Dry eye", "label": "Dry eye", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Eye discharge", "label": "Eye discharge", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Eye irritation", "label": "Eye irritation", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Eyelid oedema", "label": "Eyelid oedema", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Generalized urticaria", "label": "Generalized urticaria", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Hypoglycaemic coma", "label": "Hypoglycaemic coma", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Kidney function abnormal", "label": "Kidney function abnormal", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Lacrimation increased", "label": "Lacrimation increased", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Methicillin-resistant Staphylococcus aureus infection", "label": "Methicillin-resistant Staphylococcus aureus infection", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Oedema mouth", "label": "Oedema mouth", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Pseudomembranous colitis", "label": "Pseudomembranous colitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Punctate keratitis", "label": "Punctate keratitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Retrosternal pain", "label": "Retrosternal pain", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Subepithelial opacities", "label": "Subepithelial opacities", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Tendon rupture", "label": "Tendon rupture", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Thinking abnormal", "label": "Thinking abnormal", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Tongue oedema", "label": "Tongue oedema", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Vesiculobullous rash", "label": "Vesiculobullous rash", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Visual acuity reduced", "label": "Visual acuity reduced", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "P-aminosalicylic acid", "label": "P-aminosalicylic acid", "shape": "dot", "size": 32}, {"font": {"color": "white"}, "group": 1, "id": "Abdominal pain", "label": "Abdominal pain", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Agranulocytosis", "label": "Agranulocytosis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Allergic reactions including fever and itching", "label": "Allergic reactions including fever and itching", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Black or bloody stools", "label": "Black or bloody stools", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Brain disease", "label": "Brain disease", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Dark urine", "label": "Dark urine", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Diarrhea", "label": "Diarrhea", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Difficulty breathing", "label": "Difficulty breathing", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Eosinophilic pneumonitis", "label": "Eosinophilic pneumonitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Fever", "label": "Fever", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Goitre", "label": "Goitre", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Haemolytic anemia", "label": "Haemolytic anemia", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Hepatitis", "label": "Hepatitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Hives", "label": "Hives", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Hypoglycaemia", "label": "Hypoglycaemia", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Hypothyroidism", "label": "Hypothyroidism", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Itching", "label": "Itching", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Leukopenia", "label": "Leukopenia", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Nausea", "label": "Nausea", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Optic neuritis", "label": "Optic neuritis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Pericarditis", "label": "Pericarditis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Persistent nausea or vomiting", "label": "Persistent nausea or vomiting", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Rash", "label": "Rash", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Rash followed by a fever", "label": "Rash followed by a fever", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Severe dizziness", "label": "Severe dizziness", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Skin rash", "label": "Skin rash", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Swelling of your face, lips, tongue, or throat", "label": "Swelling of your face, lips, tongue, or throat", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Thrombocytopenia", "label": "Thrombocytopenia", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Vasculitis", "label": "Vasculitis", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Vomit that looks like coffee grounds", "label": "Vomit that looks like coffee grounds", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Vomiting", "label": "Vomiting", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 1, "id": "Yellowing of the eyes or skin (jaundice)", "label": "Yellowing of the eyes or skin (jaundice)", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "Gatifloxacin", "to": "Abnormal vision", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Acute allergic reaction", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Blepharitis allergic", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Chronic conjunctivitis", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Conjunctival disorder", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Conjunctival haemorrhage", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Conjunctival irritation", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Conjunctivitis papillary", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Corneal defect", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Corneal deposits", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Corneal thinning", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Cramps of lower extremities", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Dry eye", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Eye discharge", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Eye irritation", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Eyelid oedema", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Generalized urticaria", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Hypoglycaemic coma", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Kidney function abnormal", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Lacrimation increased", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Methicillin-resistant Staphylococcus aureus infection", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Oedema mouth", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Pseudomembranous colitis", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Punctate keratitis", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Retrosternal pain", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Subepithelial opacities", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Tendon rupture", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Thinking abnormal", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Tongue oedema", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Vesiculobullous rash", "val": 1, "width": 1}, {"from": "Gatifloxacin", "to": "Visual acuity reduced", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Abdominal pain", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Agranulocytosis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Allergic reactions including fever and itching", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Black or bloody stools", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Brain disease", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Dark urine", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Diarrhea", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Difficulty breathing", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Eosinophilic pneumonitis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Fever", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Goitre", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Haemolytic anemia", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Hepatitis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Hives", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Hypoglycaemia", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Hypothyroidism", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Itching", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Leukopenia", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Nausea", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Optic neuritis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Pericarditis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Persistent nausea or vomiting", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Rash", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Rash followed by a fever", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Severe dizziness", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Skin rash", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Swelling of your face, lips, tongue, or throat", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Thrombocytopenia", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Vasculitis", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Vomit that looks like coffee grounds", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Vomiting", "val": 1, "width": 1}, {"from": "P-aminosalicylic acid", "to": "Yellowing of the eyes or skin (jaundice)", "val": 1, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

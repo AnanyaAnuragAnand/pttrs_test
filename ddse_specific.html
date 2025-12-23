@@ -1,0 +1,596 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+                <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/css/tom-select.min.css" integrity="sha512-43fHB3GLgZfz8QXl1RPQ8O66oIgv3po9cJ5erMt1c4QISq9dYb195T3vr5ImnJPXuVroKcGBPXBFKETW8jrPNQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/tom-select/2.0.0-rc.4/js/tom-select.complete.js" integrity="sha512-jeF9CfnvzDiw9G9xiksVjxR2lib44Gnovvkv+3CgCG6NXCD4gqlA5nDAVW5WjpA+i+/zKsUWV5xNEbW1X/HH0Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 650px;
+                 background-color: #222222;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+                <div id="select-menu" class="card-header">
+                    <div class="row no-gutters">
+                        <div class="col-10 pb-2">
+                            <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="selectNode([value]);"
+                            id="select-node"
+                            placeholder="Select node..."
+                            >
+                                <option selected>Select a Node by ID</option>
+                                
+                                    <option value="Moxifloxacin & Levofloxacin">Moxifloxacin & Levofloxacin</option>
+                                
+                                    <option value="Acute febrile neutrophilic dermatosis [1.0]">Acute febrile neutrophilic dermatosis [1.0]</option>
+                                
+                                    <option value="Allergic dermatitis [1.0]">Allergic dermatitis [1.0]</option>
+                                
+                                    <option value="Atrophy of skin [1.0]">Atrophy of skin [1.0]</option>
+                                
+                                    <option value="Contact dermatitis [1.0]">Contact dermatitis [1.0]</option>
+                                
+                                    <option value="Dermatitides [1.0]">Dermatitides [1.0]</option>
+                                
+                                    <option value="Dermatitis diaper [0.9287781]">Dermatitis diaper [0.9287781]</option>
+                                
+                                    <option value="Dermatitis exfoliative [1.0]">Dermatitis exfoliative [1.0]</option>
+                                
+                                    <option value="Dermatitis medicamentosa [1.0]">Dermatitis medicamentosa [1.0]</option>
+                                
+                                    <option value="Dermatitis seborrheic [1.0]">Dermatitis seborrheic [1.0]</option>
+                                
+                                    <option value="Dermatomyositis [1.0]">Dermatomyositis [1.0]</option>
+                                
+                                    <option value="Irritation Skin [1.0]">Irritation Skin [1.0]</option>
+                                
+                                    <option value="Neurodermatitis [1.0]">Neurodermatitis [1.0]</option>
+                                
+                                    <option value="Pyoderma [1.0]">Pyoderma [1.0]</option>
+                                
+                                    <option value="Pyoderma gangrenosum [1.0]">Pyoderma gangrenosum [1.0]</option>
+                                
+                                    <option value="Scleroderma [1.0]">Scleroderma [1.0]</option>
+                                
+                                    <option value="Skin lesion [1.0]">Skin lesion [1.0]</option>
+                                
+                                    <option value="Squamous cell carcinoma of skin [1.0]">Squamous cell carcinoma of skin [1.0]</option>
+                                
+                                    <option value="Tardive dyskinesia [1.0]">Tardive dyskinesia [1.0]</option>
+                                
+                                    <option value="Moxifloxacin & Mometasone">Moxifloxacin & Mometasone</option>
+                                
+                                    <option value="Levofloxacin & Mometasone">Levofloxacin & Mometasone</option>
+                                
+                                    <option value="Dermatitis diaper [0.9017629]">Dermatitis diaper [0.9017629]</option>
+                                
+                                    <option value="Dermatitis diaper [0.925412]">Dermatitis diaper [0.925412]</option>
+                                
+                            </select>
+                        </div>
+                        <div class="col-2 pb-2">
+                            <button type="button" class="btn btn-primary btn-block" onclick="neighbourhoodHighlight({nodes: []});">Reset Selection</button>
+                        </div>
+                    </div>
+                </div>
+            
+            
+              <div id="filter-menu" class="card-header">
+                <div class="row no-gutters">
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'item')"
+                            id="select-item"
+                        >
+                        <option value="">Select a network item</option>
+                        <option value="edge">edge</option>
+                        <option value="node">node</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            onchange="updateFilter(value, 'property')"
+                            id="select-property"
+                        >
+                        <option value="">Select a property...</option>
+                    </select>
+                  </div>
+                  <div class="col-3 pb-2">
+                    <select
+                            class="form-select"
+                            aria-label="Default select example"
+                            id="select-value"
+                        >
+                        <option value="">Select value(s)...</option>
+                    </select>
+                  </div>
+                  <div class="col-1 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="highlightFilter(filter);">Filter</button>
+                  </div>
+                  <div class="col-2 pb-2">
+                    <button type="button" class="btn btn-primary btn-block" onclick="clearFilter(true)">Reset Selection</button>
+                  </div>
+                </div>
+              </div>
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+                  new TomSelect("#select-node",{
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      }
+                  });
+              
+
+              
+                  // explicitly using onItemAdd and this function as we need to save multiple values
+                  let updateValueFilter = function() {
+                      return function () {
+                      filter['value'].push(arguments[0])
+                      }
+                  }
+
+                  let valueControl = new TomSelect("#select-value",{
+                      maxItems: null,
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: updateValueFilter()
+                  });
+
+                  let addValues = function() {
+                      return function () {
+                          // clear the current value options and add the selected attribute values
+                          // tom-select handles duplicates
+                          let selectedProperty = arguments[0];
+                          valueControl.clear();
+                          valueControl.clearOptions();
+                          filter['value'] = []
+                          if (filter['item'] === 'node') {
+                              for (let each in allNodes) {
+                                  valueControl.addOption({
+                                      id:allNodes[each][selectedProperty],
+                                      title:allNodes[each][selectedProperty]
+                                  })
+                              }
+                          }
+                          else if (filter['item'] === 'edge') {
+                              for (let each in allEdges) {
+                                  valueControl.addOption({
+                                      id:allEdges[each][selectedProperty],
+                                      title:allEdges[each][selectedProperty]
+                                  })
+                              }
+                          }
+                      }
+                  };
+
+                  let propControl = new TomSelect("#select-property",{
+                      valueField: 'id',
+                      labelField: 'title',
+                      searchField: 'title',
+                      create: false,
+                      sortField: {
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addValues()
+                  });
+
+                  let addProperties = function() {
+                      return function () {
+                          // loops through the selected network item and adds the attributes to dropdown
+                          // tom-select handles duplicates
+                          clearFilter(false)
+                          if (arguments[0] === 'edge') {
+                              for (let each in allEdges) {
+                                  if (allEdges.hasOwnProperty(each)) {
+                                      for (let eachProp in allEdges[each]) {
+                                          if (allEdges[each].hasOwnProperty(eachProp)) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                          else if (arguments[0] === 'node') {
+                              for (let each in allNodes) {
+                                  if (allNodes.hasOwnProperty(each)) {
+                                      for (let eachProp in allNodes[each]) {
+                                          if (allNodes[each].hasOwnProperty(eachProp)
+                                              && (eachProp !== 'hidden' && eachProp !== 'savedLabel'
+                                                  && eachProp !== 'hiddenLabel')) {
+                                              propControl.addOption({id: eachProp, title: eachProp})
+
+                                          }
+                                      }
+                                  }
+                              }
+                          }
+                      }
+                  };
+
+                  let itemControl = new TomSelect("#select-item",{
+                      create: false,
+                      sortField:{
+                          field: "text",
+                          direction: "asc"
+                      },
+                      onItemAdd: addProperties()
+                  });
+
+                  function clearFilter(reset) {
+                      // utility function to clear all the selected filter options
+                      // if reset is set to true, the existing filter will be removed
+                      // else, only the dropdown options are cleared
+                      propControl.clear();
+                      propControl.clearOptions();
+                      valueControl.clear();
+                      valueControl.clearOptions();
+                      filter = {
+                          item : '',
+                          property : '',
+                          value : []
+                      }
+                      if (reset) {
+                          itemControl.clear();
+                          filterHighlight({nodes: []})
+                      }
+                  }
+
+                  function updateFilter(value, key) {
+                      // key could be 'item' or 'property' and value is as selected in dropdown
+                      filter[key] = value
+                  }
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"font": {"color": "white"}, "group": 1, "id": "Moxifloxacin \u0026 Levofloxacin", "label": "Moxifloxacin \u0026 Levofloxacin", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 0, "id": "Acute febrile neutrophilic dermatosis [1.0]", "label": "Acute febrile neutrophilic dermatosis [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Allergic dermatitis [1.0]", "label": "Allergic dermatitis [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Atrophy of skin [1.0]", "label": "Atrophy of skin [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Contact dermatitis [1.0]", "label": "Contact dermatitis [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Dermatitides [1.0]", "label": "Dermatitides [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Dermatitis diaper [0.9287781]", "label": "Dermatitis diaper [0.9287781]", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 0, "id": "Dermatitis exfoliative [1.0]", "label": "Dermatitis exfoliative [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Dermatitis medicamentosa [1.0]", "label": "Dermatitis medicamentosa [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Dermatitis seborrheic [1.0]", "label": "Dermatitis seborrheic [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Dermatomyositis [1.0]", "label": "Dermatomyositis [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Irritation Skin [1.0]", "label": "Irritation Skin [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 2, "id": "Neurodermatitis [1.0]", "label": "Neurodermatitis [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Pyoderma [1.0]", "label": "Pyoderma [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Pyoderma gangrenosum [1.0]", "label": "Pyoderma gangrenosum [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Scleroderma [1.0]", "label": "Scleroderma [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Skin lesion [1.0]", "label": "Skin lesion [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Squamous cell carcinoma of skin [1.0]", "label": "Squamous cell carcinoma of skin [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 1, "id": "Tardive dyskinesia [1.0]", "label": "Tardive dyskinesia [1.0]", "shape": "dot", "size": 3}, {"font": {"color": "white"}, "group": 0, "id": "Moxifloxacin \u0026 Mometasone", "label": "Moxifloxacin \u0026 Mometasone", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 2, "id": "Levofloxacin \u0026 Mometasone", "label": "Levofloxacin \u0026 Mometasone", "shape": "dot", "size": 18}, {"font": {"color": "white"}, "group": 0, "id": "Dermatitis diaper [0.9017629]", "label": "Dermatitis diaper [0.9017629]", "shape": "dot", "size": 1}, {"font": {"color": "white"}, "group": 2, "id": "Dermatitis diaper [0.925412]", "label": "Dermatitis diaper [0.925412]", "shape": "dot", "size": 1}]);
+                  edges = new vis.DataSet([{"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Acute febrile neutrophilic dermatosis [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Allergic dermatitis [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Atrophy of skin [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Contact dermatitis [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatitides [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatitis diaper [0.9287781]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatitis exfoliative [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatitis medicamentosa [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatitis seborrheic [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Dermatomyositis [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Irritation Skin [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Neurodermatitis [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Pyoderma [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Pyoderma gangrenosum [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Scleroderma [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Skin lesion [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Squamous cell carcinoma of skin [1.0]", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Levofloxacin", "to": "Tardive dyskinesia [1.0]", "val": 1, "width": 1}, {"from": "Acute febrile neutrophilic dermatosis [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Acute febrile neutrophilic dermatosis [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Allergic dermatitis [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Allergic dermatitis [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Atrophy of skin [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Atrophy of skin [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Contact dermatitis [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Contact dermatitis [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitides [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitides [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis exfoliative [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis exfoliative [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis medicamentosa [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis medicamentosa [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis seborrheic [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatitis seborrheic [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatomyositis [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Dermatomyositis [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Irritation Skin [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Irritation Skin [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Neurodermatitis [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Neurodermatitis [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Pyoderma [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Pyoderma [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Pyoderma gangrenosum [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Pyoderma gangrenosum [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Scleroderma [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Scleroderma [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Skin lesion [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Skin lesion [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Squamous cell carcinoma of skin [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Squamous cell carcinoma of skin [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Tardive dyskinesia [1.0]", "to": "Moxifloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Tardive dyskinesia [1.0]", "to": "Levofloxacin \u0026 Mometasone", "val": 1, "width": 1}, {"from": "Moxifloxacin \u0026 Mometasone", "to": "Dermatitis diaper [0.9017629]", "val": 1, "width": 1}, {"from": "Levofloxacin \u0026 Mometasone", "to": "Dermatitis diaper [0.925412]", "val": 1, "width": 1}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+                    network.on("selectNode", neighbourhoodHighlight);
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
